@@ -13,15 +13,19 @@ class ProgressRing extends StatelessWidget {
     required this.progress,
     required this.title,
     required this.subtitle,
-    this.size = 210.0,
+    this.size = 220.0,
     this.strokeWidth = 14.0,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final accent = theme.colorScheme.primary;
-    final trackColor = theme.dividerColor.withOpacity(0.3);
+    // Clean, light track color matching the original light theme
+    final trackColor = isDark
+        ? theme.dividerColor.withValues(alpha: 0.3)
+        : const Color(0xFFE8E8EE);
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: progress.clamp(0.0, 1.0)),
@@ -43,30 +47,35 @@ class ProgressRing extends StatelessWidget {
                   strokeWidth: strokeWidth,
                 ),
               ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: -1.0,
-                      height: 1.1,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.w300,
+                        fontSize: 42,
+                        letterSpacing: -1.0,
+                        height: 1.1,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w400,
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                      height: 1.3,
+                    const SizedBox(height: 8),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13,
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.65),
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

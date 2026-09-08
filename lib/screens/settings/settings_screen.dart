@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import '../../models/user_settings.dart';
@@ -33,7 +34,8 @@ class SettingsScreen extends ConsumerWidget {
       builder: (context) {
         final theme = Theme.of(context);
         return AlertDialog(
-          title: Text('Edit $title'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Edit $title', style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Form(
             key: formKey,
             child: Column(
@@ -41,9 +43,10 @@ class SettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Set target goals using rounds or repetitions. Changing either field updates the other.',
+                  'Set target goals using rounds or repetitions. Changing either field automatically calculates the other (1 mala = 108 mantras).',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -52,11 +55,10 @@ class SettingsScreen extends ConsumerWidget {
                   controller: malasController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Mala Rounds',
                     suffixText: 'rounds',
-                    prefixIcon: const Icon(Icons.refresh_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    prefixIcon: Icon(Icons.refresh_rounded),
                   ),
                   onChanged: (val) {
                     if (isSyncing) return;
@@ -82,11 +84,10 @@ class SettingsScreen extends ConsumerWidget {
                   controller: mantrasController,
                   keyboardType: TextInputType.number,
                   style: theme.textTheme.bodyLarge,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Mantra Repetitions',
                     suffixText: 'mantras',
-                    prefixIcon: const Icon(Icons.pin_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    prefixIcon: Icon(Icons.pin_outlined),
                   ),
                   onChanged: (val) {
                     if (isSyncing) return;
@@ -110,12 +111,13 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   final finalMantras = int.parse(mantrasController.text);
@@ -123,7 +125,13 @@ class SettingsScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('Save'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: const Text('Save Target', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -153,7 +161,7 @@ class SettingsScreen extends ConsumerWidget {
       final String jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
       final Uint8List bytes = Uint8List.fromList(utf8.encode(jsonString));
 
-      // 2. Save directly to the system Downloads folder (on Android/iOS/Windows/etc.)
+      // 2. Save directly to system Downloads
       final String path = await FileSaver.instance.saveFile(
         name: 'bead_tracker_backup',
         bytes: bytes,
@@ -165,10 +173,11 @@ class SettingsScreen extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Row(
               children: [
                 Icon(Icons.check_circle_outline_rounded, color: Colors.green),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Text('Export Complete'),
               ],
             ),
@@ -187,10 +196,11 @@ class SettingsScreen extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Row(
               children: [
                 Icon(Icons.error_outline_rounded, color: Colors.redAccent),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Text('Export Failed'),
               ],
             ),
@@ -210,7 +220,6 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
     final theme = Theme.of(context);
     try {
-      // 1. Pick file
       final FilePickerResult? result = await FilePicker.pickFiles(
         dialogTitle: 'Select bead_tracker_backup.json file',
         type: FileType.custom,
@@ -218,15 +227,13 @@ class SettingsScreen extends ConsumerWidget {
       );
 
       if (result == null || result.files.single.path == null) {
-        // User cancelled
-        return;
+        return; // User cancelled
       }
 
       final path = result.files.single.path!;
       final file = File(path);
       final content = await file.readAsString();
 
-      // 2. Parse and Validate JSON
       final Map<String, dynamic> backupData = jsonDecode(content) as Map<String, dynamic>;
 
       if (backupData['settings'] == null || backupData['entries'] == null) {
@@ -237,15 +244,13 @@ class SettingsScreen extends ConsumerWidget {
       final entriesJson = backupData['entries'] as List<dynamic>;
 
       final importedSettings = UserSettings.fromJson(settingsJson);
-      final importedEntries = entriesJson
-          .map((e) => DailyEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final importedEntries = entriesJson.map((e) => DailyEntry.fromJson(e as Map<String, dynamic>)).toList();
 
-      // 3. Confirm import (overwrites all data)
       if (context.mounted) {
         final confirm = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Text('Confirm Import?'),
             content: const Text(
               'Importing this backup will overwrite all current daily logs, sessions, offsets, and restore goal configurations from the backup file. This cannot be undone.',
@@ -255,10 +260,15 @@ class SettingsScreen extends ConsumerWidget {
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary),
-                child: const Text('Restore Data'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: const Text('Restore Data', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -267,13 +277,13 @@ class SettingsScreen extends ConsumerWidget {
         if (confirm != true) return;
       }
 
-      // Show loading spinner
       if (context.mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            content: Row(
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            content: const Row(
               children: [
                 CircularProgressIndicator(),
                 SizedBox(width: 20),
@@ -284,21 +294,20 @@ class SettingsScreen extends ConsumerWidget {
         );
       }
 
-      // Restore to database
       await ref.read(dailyEntriesProvider.notifier).restoreBackup(importedSettings, importedEntries);
       await ref.read(userSettingsProvider.notifier).loadSettings();
 
-      // Close loading spinner
       if (context.mounted) {
         Navigator.of(context).pop();
-        
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Row(
               children: [
                 Icon(Icons.check_circle_outline_rounded, color: Colors.green),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Text('Import Complete'),
               ],
             ),
@@ -317,10 +326,11 @@ class SettingsScreen extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Row(
               children: [
                 Icon(Icons.error_outline_rounded, color: Colors.redAccent),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Text('Import Failed'),
               ],
             ),
@@ -342,6 +352,7 @@ class SettingsScreen extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Reset All Data?'),
         content: const Text(
           'This will permanently delete all daily logs, sessions, offsets, and restore goals to default. This action cannot be reversed.',
@@ -351,10 +362,15 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Reset Everything'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            child: const Text('Reset Everything', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -362,7 +378,6 @@ class SettingsScreen extends ConsumerWidget {
 
     if (confirm == true) {
       await ref.read(dailyEntriesProvider.notifier).resetAll();
-      // Wipe settings and restore defaults (Mantra-based goals)
       await ref.read(userSettingsProvider.notifier).updateSettings(
             dailyGoal: 216,
             monthlyGoal: 5400,
@@ -373,9 +388,11 @@ class SettingsScreen extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('App data reset successfully'),
+          SnackBar(
+            content: const Text('App data reset successfully'),
             backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         );
       }
@@ -395,60 +412,57 @@ class SettingsScreen extends ConsumerWidget {
         child: settingsAsync.when(
           data: (settings) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Title: Goals Section
-                  _buildSectionHeader(context, 'GOALS'),
+                  _buildSectionHeader(context, 'GOALS & TARGETS', Icons.flag_rounded),
                   Card(
                     child: Column(
                       children: [
                         _buildSettingTile(
                           context,
                           title: 'Daily Practice Goal',
-                          subtitle: '${(settings.dailyGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${settings.dailyGoal} mantras)',
+                          subtitle:
+                              '${(settings.dailyGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${settings.dailyGoal} mantras)',
                           icon: Icons.today_rounded,
                           onTap: () => _showEditGoalDialog(
                             context,
                             ref,
                             title: 'Daily Goal',
                             currentValueMantras: settings.dailyGoal,
-                            onSave: (val) => ref
-                                .read(userSettingsProvider.notifier)
-                                .updateSettings(dailyGoal: val),
+                            onSave: (val) => ref.read(userSettingsProvider.notifier).updateSettings(dailyGoal: val),
                           ),
                         ),
-                        const Divider(height: 1, indent: 56),
+                        Divider(height: 1, indent: 64, color: theme.dividerColor.withValues(alpha: 0.5)),
                         _buildSettingTile(
                           context,
                           title: 'Monthly Practice Goal',
-                          subtitle: '${(settings.monthlyGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${settings.monthlyGoal} mantras)',
+                          subtitle:
+                              '${(settings.monthlyGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${settings.monthlyGoal} mantras)',
                           icon: Icons.calendar_month_rounded,
                           onTap: () => _showEditGoalDialog(
                             context,
                             ref,
                             title: 'Monthly Goal',
                             currentValueMantras: settings.monthlyGoal,
-                            onSave: (val) => ref
-                                .read(userSettingsProvider.notifier)
-                                .updateSettings(monthlyGoal: val),
+                            onSave: (val) => ref.read(userSettingsProvider.notifier).updateSettings(monthlyGoal: val),
                           ),
                         ),
-                        const Divider(height: 1, indent: 56),
+                        Divider(height: 1, indent: 64, color: theme.dividerColor.withValues(alpha: 0.5)),
                         _buildSettingTile(
                           context,
-                          title: 'Total Practice Goal',
-                          subtitle: '${(settings.totalGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${settings.totalGoal} mantras)',
+                          title: 'Total Lifetime Goal',
+                          subtitle:
+                              '${(settings.totalGoal / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (${NumberFormat('#,###').format(settings.totalGoal)} mantras)',
                           icon: Icons.emoji_events_rounded,
                           onTap: () => _showEditGoalDialog(
                             context,
                             ref,
                             title: 'Total Goal',
                             currentValueMantras: settings.totalGoal,
-                            onSave: (val) => ref
-                                .read(userSettingsProvider.notifier)
-                                .updateSettings(totalGoal: val),
+                            onSave: (val) => ref.read(userSettingsProvider.notifier).updateSettings(totalGoal: val),
                           ),
                         ),
                       ],
@@ -457,69 +471,78 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
 
                   // Title: Data adjustment
-                  _buildSectionHeader(context, 'DATA ADJUSTMENTS'),
+                  _buildSectionHeader(context, 'PRACTICE OFFSET', Icons.tune_rounded),
                   Card(
                     child: _buildSettingTile(
                       context,
-                      title: 'Manual Count Offset',
-                      subtitle: '+${(settings.totalOffset / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (+${settings.totalOffset} mantras) starting offset',
-                      icon: Icons.add_moderator_rounded,
+                      title: 'Manual Starting Offset',
+                      subtitle:
+                          '+${(settings.totalOffset / 108.0).toStringAsFixed(1).replaceAll(RegExp(r"\.0$"), "")} malas (+${NumberFormat('#,###').format(settings.totalOffset)} mantras) prior count',
+                      icon: Icons.history_rounded,
                       onTap: () => _showEditGoalDialog(
                         context,
                         ref,
                         title: 'Starting Count Offset',
                         currentValueMantras: settings.totalOffset,
-                        onSave: (val) => ref
-                            .read(userSettingsProvider.notifier)
-                            .updateSettings(totalOffset: val),
+                        onSave: (val) => ref.read(userSettingsProvider.notifier).updateSettings(totalOffset: val),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Title: Preferences Section
-                  _buildSectionHeader(context, 'PREFERENCES'),
+                  _buildSectionHeader(context, 'PREFERENCES', Icons.palette_rounded),
                   Card(
                     child: SwitchListTile(
                       value: settings.isDarkMode,
-                      onChanged: (val) => ref
-                          .read(userSettingsProvider.notifier)
-                          .updateSettings(isDarkMode: val),
+                      onChanged: (val) => ref.read(userSettingsProvider.notifier).updateSettings(isDarkMode: val),
                       title: const Text(
-                        'Dark Theme',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        'Dark Aesthetic',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       subtitle: Text(
-                        settings.isDarkMode ? 'Using dark aesthetic' : 'Using light aesthetic',
+                        settings.isDarkMode ? 'Using dark contrast theme' : 'Using light clean theme',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                        ),
                       ),
-                      secondary: Icon(
-                        settings.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                        color: theme.colorScheme.primary,
+                      secondary: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          settings.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
                       ),
-                      activeColor: theme.colorScheme.primary,
+                      activeThumbColor: theme.colorScheme.primary,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Title: Backup Section
-                  _buildSectionHeader(context, 'BACKUP & RESTORE'),
+                  _buildSectionHeader(context, 'BACKUP & RESTORE', Icons.cloud_sync_rounded),
                   Card(
                     child: Column(
                       children: [
                         _buildSettingTile(
                           context,
                           title: 'Export Local Backup',
-                          subtitle: 'Save a backup of your logs to local storage',
-                          icon: Icons.cloud_upload_rounded,
+                          subtitle: 'Save a copy of your logs to device Downloads folder',
+                          icon: Icons.upload_file_rounded,
                           onTap: () => _exportBackup(context, ref),
                         ),
-                        const Divider(height: 1, indent: 56),
+                        Divider(height: 1, indent: 64, color: theme.dividerColor.withValues(alpha: 0.5)),
                         _buildSettingTile(
                           context,
                           title: 'Import Local Backup',
-                          subtitle: 'Restore entries and settings from backup file',
-                          icon: Icons.cloud_download_rounded,
+                          subtitle: 'Restore practice records and targets from JSON backup',
+                          icon: Icons.file_download_rounded,
                           onTap: () => _importBackup(context, ref),
                         ),
                       ],
@@ -527,23 +550,26 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // Title: Reset Section
-                  _buildSectionHeader(context, 'DANGER ZONE'),
+                  // Title: Danger Zone Section
+                  _buildSectionHeader(context, 'DANGER ZONE', Icons.warning_amber_rounded,
+                      color: Colors.redAccent.withValues(alpha: 0.8)),
                   Card(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                      borderRadius: BorderRadius.circular(22),
+                      side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.4), width: 1.2),
                     ),
+                    color: Colors.redAccent.withValues(alpha: 0.04),
                     child: _buildSettingTile(
                       context,
                       title: 'Reset All Data',
-                      subtitle: 'Wipe all histories, entries, and settings',
+                      subtitle: 'Permanently wipe all session histories, offsets, and goals',
                       icon: Icons.delete_forever_rounded,
                       iconColor: Colors.redAccent,
                       textColor: Colors.redAccent,
                       onTap: () => _confirmReset(context, ref),
                     ),
                   ),
+                  const SizedBox(height: 36),
                 ],
               ),
             );
@@ -555,17 +581,26 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon, {Color? color}) {
     final theme = Theme.of(context);
+    final headerColor = color ?? theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6);
+
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-      child: Text(
-        title,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-          letterSpacing: 1.2,
-        ),
+      padding: const EdgeInsets.only(left: 6.0, bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: headerColor),
+          const SizedBox(width: 6),
+          Text(
+            title,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: headerColor,
+              letterSpacing: 1.1,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -583,24 +618,36 @@ class SettingsScreen extends ConsumerWidget {
     final primary = theme.colorScheme.primary;
 
     return ListTile(
-      leading: Icon(
-        icon,
-        color: iconColor ?? primary,
-        size: 24,
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: (iconColor ?? primary).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: iconColor ?? primary,
+          size: 20,
+        ),
       ),
       title: Text(
         title,
         style: TextStyle(
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
           color: textColor ?? theme.textTheme.bodyLarge?.color,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: theme.textTheme.bodyMedium,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontSize: 12,
+          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+        ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_right_rounded,
+        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.35),
         size: 20,
       ),
       onTap: onTap,

@@ -11,20 +11,24 @@ class MainNavigation extends StatelessWidget {
 
   int _getSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/calendar')) return 1;
-    if (location.startsWith('/settings')) return 2;
-    return 0; // Default to Home
+    if (location.startsWith('/home')) return 1;
+    if (location.startsWith('/calendar')) return 2;
+    if (location.startsWith('/settings')) return 3;
+    return 0; // Default to Counter
   }
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        context.go('/home');
+        context.go('/counter');
         break;
       case 1:
-        context.go('/calendar');
+        context.go('/home');
         break;
       case 2:
+        context.go('/calendar');
+        break;
+      case 3:
         context.go('/settings');
         break;
     }
@@ -41,7 +45,7 @@ class MainNavigation extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: theme.dividerColor.withOpacity(0.5),
+              color: theme.dividerColor.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -50,6 +54,10 @@ class MainNavigation extends StatelessWidget {
           selectedIndex: selectedIndex,
           onDestinationSelected: (index) => _onItemTapped(index, context),
           destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.radio_button_checked_rounded),
+              label: 'Counter',
+            ),
             NavigationDestination(
               icon: Icon(Icons.dashboard_rounded),
               label: 'Home',

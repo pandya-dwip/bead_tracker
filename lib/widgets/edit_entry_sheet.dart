@@ -43,11 +43,11 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
     final note = _noteController.text.trim().isEmpty ? null : _noteController.text.trim();
 
     await ref.read(dailyEntriesProvider.notifier).updateSession(
-      date: widget.date,
-      sessionTime: widget.session.time,
-      count: count,
-      note: note,
-    );
+          date: widget.date,
+          sessionTime: widget.session.time,
+          count: count,
+          note: note,
+        );
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -55,6 +55,8 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
         SnackBar(
           content: const Text('Entry updated successfully'),
           backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -62,12 +64,11 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
   }
 
   Future<void> _delete() async {
-    // Confirm dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Entry?'),
-        content: const Text('Are you sure you want to remove this logged session? This action cannot be undone.'),
+        title: const Text('Delete Session?'),
+        content: const Text('Are you sure you want to remove this logged practice session? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -84,17 +85,19 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
 
     if (confirm == true && mounted) {
       await ref.read(dailyEntriesProvider.notifier).deleteSession(
-        widget.date,
-        widget.session.time,
-      );
+            widget.date,
+            widget.session.time,
+          );
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Entry deleted'),
+          SnackBar(
+            content: const Text('Session deleted'),
             backgroundColor: Colors.redAccent,
-            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -121,7 +124,7 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
             // Handle bar
             Center(
               child: Container(
-                width: 36,
+                width: 40,
                 height: 4,
                 decoration: BoxDecoration(
                   color: theme.dividerColor,
@@ -133,8 +136,11 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
 
             // Header
             Text(
-              'Edit Session',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              'Edit Practice Session',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -148,9 +154,6 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                 labelText: 'Mala Rounds',
                 helperText: 'Will be stored as ${((int.tryParse(_countController.text) ?? 0) * 108)} mantras',
                 prefixIcon: const Icon(Icons.pin_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: (val) {
@@ -170,13 +173,10 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
             TextFormField(
               controller: _noteController,
               textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Note',
-                prefixIcon: const Icon(Icons.notes_rounded),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: const InputDecoration(
+                labelText: 'Reflection / Note',
+                prefixIcon: Icon(Icons.notes_rounded),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               maxLines: 1,
             ),
@@ -190,7 +190,7 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                     onPressed: _delete,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
-                      side: const BorderSide(color: Colors.redAccent),
+                      side: const BorderSide(color: Colors.redAccent, width: 1.2),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -202,7 +202,7 @@ class _EditEntrySheetState extends ConsumerState<EditEntrySheet> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(

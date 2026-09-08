@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/main_navigation.dart';
+import '../screens/counter/counter_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/calendar/calendar_screen.dart';
 import '../screens/settings/settings_screen.dart';
@@ -18,6 +19,12 @@ final goRouter = GoRouter(
         return MainNavigation(child: child);
       },
       routes: [
+        GoRoute(
+          path: '/counter',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: CounterScreen(),
+          ),
+        ),
         GoRoute(
           path: '/home',
           pageBuilder: (context, state) => const NoTransitionPage(

@@ -35,15 +35,15 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final count = int.parse(_countController.text);
     final note = _noteController.text.trim().isEmpty ? null : _noteController.text.trim();
 
     await ref.read(dailyEntriesProvider.notifier).addSession(
-      widget.selectedDate,
-      count,
-      note,
-    );
+          widget.selectedDate,
+          count,
+          note,
+        );
 
     if (mounted) {
       Navigator.of(context).pop();
@@ -51,6 +51,8 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
         SnackBar(
           content: Text('Logged $count ${count == 1 ? "mala" : "malas"} (${count * 108} mantras) successfully'),
           backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -60,7 +62,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -77,7 +79,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
             // Handle bar
             Center(
               child: Container(
-                width: 36,
+                width: 40,
                 height: 4,
                 decoration: BoxDecoration(
                   color: theme.dividerColor,
@@ -86,11 +88,14 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Header
             Text(
-              'Log Session',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              'Log Mala Practice',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -104,17 +109,17 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
                 _buildQuickButton('+8 Malas', () => _quickAdd(8)),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Center(
               child: Text(
                 '1 mala round = 108 mantra repetitions',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                   fontSize: 12,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             // Custom count input
             TextFormField(
@@ -124,11 +129,8 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
               decoration: InputDecoration(
                 labelText: 'Mala Rounds',
                 hintText: 'Enter number of mala rounds',
-                helperText: 'Will be stored as ${((int.tryParse(_countController.text) ?? 0) * 108)} mantras',
+                helperText: 'Will be recorded as ${((int.tryParse(_countController.text) ?? 0) * 108)} mantras',
                 prefixIcon: const Icon(Icons.pin_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               validator: (val) {
@@ -148,20 +150,17 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
             TextFormField(
               controller: _noteController,
               textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Optional Note',
+              decoration: const InputDecoration(
+                labelText: 'Reflection / Note (Optional)',
                 hintText: 'e.g., Morning meditation, Focus, calm',
-                prefixIcon: const Icon(Icons.notes_rounded),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                prefixIcon: Icon(Icons.notes_rounded),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               maxLines: 1,
             ),
             const SizedBox(height: 24),
 
-            // Action Buttons
+            // Action Button
             ElevatedButton(
               onPressed: _save,
               style: ElevatedButton.styleFrom(
@@ -174,7 +173,7 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
                 elevation: 0,
               ),
               child: const Text(
-                'Save Entry',
+                'Save Practice Session',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -188,15 +187,15 @@ class _AddEntrySheetState extends ConsumerState<AddEntrySheet> {
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 72,
+        width: 84,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: theme.dividerColor.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: theme.dividerColor.withOpacity(0.5),
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
